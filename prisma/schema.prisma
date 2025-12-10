@@ -81,6 +81,7 @@ enum OrderStatus {
   DELIVERED
   CANCELLED
 }
+<<<<<<< HEAD
 
 model BlingToken {
   id           String   @id @default(uuid())
@@ -91,3 +92,5 @@ model BlingToken {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
+=======
+>>>>>>> 4f772bea4e56968f8b7caa29f0449937ad215198
