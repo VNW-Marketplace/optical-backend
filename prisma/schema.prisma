@@ -9,15 +9,16 @@ datasource db {
 }
 
 model User {
-  id        String     @id @default(uuid())
-  email     String     @unique
-  password  String
-  name      String
-  role      UserRole   @default(CUSTOMER)
-  status    UserStatus @default(ACTIVE)
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  orders    Order[]
+  id         String      @id @default(uuid())
+  email      String      @unique
+  password   String
+  name       String
+  role       UserRole    @default(CUSTOMER)
+  status     UserStatus  @default(ACTIVE)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  orders     Order[]
+  blingToken BlingToken?
 }
 
 model Category {
@@ -83,11 +84,16 @@ enum OrderStatus {
 }
 
 model BlingToken {
-  id           String   @id @default(uuid())
-  accessToken  String   @db.Text
-  refreshToken String   @db.Text
-  expiresAt    DateTime
+  id           String    @id @default(uuid())
+  userId       String    @unique
+  clientId     String    @unique
+  clientSecret String    @db.Text
+  state        String    @unique
+  accessToken  String?   @db.Text
+  refreshToken String?   @db.Text
+  expiresAt    DateTime?
   scope        String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

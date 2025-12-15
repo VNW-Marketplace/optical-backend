@@ -1,9 +1,7 @@
-import { Controller, Get, Query, Res, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, Res, UseGuards, Request } from '@nestjs/common';
 import { Response } from 'express';
 import { BlingService } from './bling.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
-import { Roles, UserRole } from '../../common/decorators/roles.decorator';
 import { ConfigService } from '@nestjs/config';
 
 @Controller('bling')
@@ -14,14 +12,23 @@ export class BlingController {
     private blingService: BlingService,
     private config: ConfigService,
   ) {
-    this.frontendUrl = this.config.get('FRONTEND_URL') || 'http://localhost:8080';
+    this.frontendUrl = this.config.get('FRONTEND_URL') || 'https://optical-market-frontend.vercel.app';
+  }
+
+  @Post('credentials')
+  @UseGuards(JwtAuthGuard)
+  async saveCredentials(@Request() req: any, @Body() body: { clientId: string; clientSecret: string; state: string }) {
+    const userId = req.user.sub;
+    await this.blingService.saveCredentials(userId, body.clientId, body.clientSecret, body.state);
+    return { success: true };
   }
 
   @Get('status')
   @UseGuards(JwtAuthGuard)
-  async getStatus() {
-    const configured = await this.blingService.isConfigured();
-    const status = await this.blingService.getConnectionStatus();
+  async getStatus(@Request() req: any) {
+    const userId = req.user.sub;
+    const configured = await this.blingService.isConfigured(userId);
+    const status = await this.blingService.getConnectionStatus(userId);
     return {
       configured,
       ...status,
@@ -35,21 +42,26 @@ export class BlingController {
     @Res() res: Response,
   ) {
     if (!code) {
-      return res.redirect(`${this.frontendUrl}/admin?bling_error=no_code`);
+      return res.redirect(`${this.frontendUrl}?bling_error=no_code`);
+    }
+
+    if (!state) {
+      return res.redirect(`${this.frontendUrl}?bling_error=no_state`);
     }
 
     try {
-      await this.blingService.exchangeCodeForTokens(code);
-      return res.redirect(`${this.frontendUrl}/admin?bling_success=true`);
+      await this.blingService.handleOAuthCallback(code, state);
+      return res.redirect(`${this.frontendUrl}?bling_success=true`);
     } catch (error) {
       console.error('Bling OAuth error:', error);
-      return res.redirect(`${this.frontendUrl}/admin?bling_error=token_exchange_failed`);
+      return res.redirect(`${this.frontendUrl}?bling_error=token_exchange_failed`);
     }
   }
 
   @Get('sync/products')
   @UseGuards(JwtAuthGuard)
-  async syncProducts() {
-    return await this.blingService.syncProducts();
+  async syncProducts(@Request() req: any) {
+    const userId = req.user.sub;
+    return await this.blingService.syncProducts(userId);
   }
 }
